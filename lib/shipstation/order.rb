@@ -28,9 +28,11 @@ module Shipstation
 
       # params: { [:username], [:password], input: [ {:order_number, ... }, { :order_number, ... } ] }
       # todo: complete in future phase
-      # def create_update_orders params
-      #     Shipstation.request(:post, "orders/createorders", params)
-      # end
+      def create_update_orders(params={})
+        response = Shipstation.batch_request(:post, "orders/createorders", params)
+
+        response
+      end
     end
   end
 end

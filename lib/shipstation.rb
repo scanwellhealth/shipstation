@@ -56,11 +56,7 @@ module Shipstation
 
     attr_writer :password
 
-    def request method, resource, params = {}
-      ss_username = params[:username] || Shipstation.username
-      ss_password = params[:password] || Shipstation.password
-
-      params.except!(:username, :password)
+    def batch_request method, resource, params = []
 
       defined? method or raise(
         ArgumentError, "Request method has not been specified"
@@ -75,6 +71,44 @@ module Shipstation
         headers = {:accept => :json, content_type: :json}
         payload = params
       end
+
+      RestClient::Request.new({
+                                method: method,
+                                url: API_BASE + resource,
+                                user: ss_username,
+                                password: ss_password,
+                                payload: payload ? payload.to_json : nil,
+                                headers: headers
+                              }).execute do |response, request, result|
+        if response.code != 200
+          raise ApiRequestError.new(
+            response_code: response.code,
+            response_headers: response.headers,
+            response_body: response.to_str
+          )
+        end
+        str_response = response.to_str
+        str_response.blank? ? '' : JSON.parse(str_response)
+      end
+    end
+
+
+    def request method, resource, params = {}
+
+      defined? method or raise(
+        ArgumentError, "Request method has not been specified"
+      )
+      defined? resource or raise(
+        ArgumentError, "Request resource has not been specified"
+      )
+      if method == :get
+        headers = {:accept => :json, content_type: :json}.merge({params: params})
+        payload = nil
+      else
+        headers = {:accept => :json, content_type: :json}
+        payload = params
+      end
+
       RestClient::Request.new({
                                 method: method,
                                 url: API_BASE + resource,
@@ -97,6 +131,14 @@ module Shipstation
 
     def datetime_format datetime
       datetime.strftime("%Y-%m-%d %T")
+    end
+
+    def ss_username
+      Shipstation.username
+    end
+
+    def ss_password
+      Shipstation.password
     end
   end
 end
